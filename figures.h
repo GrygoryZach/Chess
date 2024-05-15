@@ -13,7 +13,7 @@ struct Piece {
 	explicit Piece(int bw_) {bw = bw_;}
 
 	virtual bool can_move(int x0, int y0, int x1, int y1) { return 0; }
-	virtual bool can_eat(int x0, int y0, int x1, int y1) { return 0; }
+	virtual bool can_capture(int x0, int y0, int x1, int y1) { return 0; }
 };
 
 struct Pawn : public Piece {
@@ -22,7 +22,7 @@ struct Pawn : public Piece {
 	bool can_move(int x0, int y0, int x1, int y1) override{
 		return (x0 == x1) && ((y1 - y0) * pow(-1, !bw) == 1 || (y0 == 1 + (5 * !bw) && (y1 - y0) * pow(-1, !bw) == 2));
 	}
-	bool can_eat(int x0, int y0, int x1, int y1) override{
+	bool can_capture(int x0, int y0, int x1, int y1) override{
 		return y1 == y0 + 1 * pow(-1, !bw) && (x1 == x0 + 1 || x1 == x0 - 1);
 	}
 };
@@ -33,7 +33,7 @@ struct Rook : public Piece {
 	bool can_move(int x0, int y0, int x1, int y1) override{
 		return x0 == x1 || y0 == y1;
 	}
-	bool can_eat(int x0, int y0, int x1, int y1) override{
+	bool can_capture(int x0, int y0, int x1, int y1) override{
 		return can_move(x0, y0, x1, y1);
 	}
 };
@@ -44,7 +44,7 @@ struct Bishop : public Piece {
 	bool can_move(int x0, int y0, int x1, int y1) override{
 		return abs(x1 - x0) == abs(y1 - y0);
 	}
-	bool can_eat(int x0, int y0, int x1, int y1) override{
+	bool can_capture(int x0, int y0, int x1, int y1) override{
 		return can_move(x0, y0, x1, y1);
 	}
 };
@@ -55,7 +55,7 @@ struct Knight : public Piece {
 	bool can_move(int x0, int y0, int x1, int y1) override{
 		return (abs(x1 - x0) == 2 && abs(y1 - y0) == 1) || (abs(x1 - x0) == 1 && abs(y1 - y0) == 2);
 	}
-	bool can_eat(int x0, int y0, int x1, int y1) override{
+	bool can_capture(int x0, int y0, int x1, int y1) override{
 		return can_move(x0, y0, x1, y1);
 	}
 };
@@ -66,7 +66,7 @@ struct Queen : public Piece {
 	bool can_move(int x0, int y0, int x1, int y1) override{
 		return abs(x1 - x0) == abs(y1 - y0) || (x0 == x1 || y0 == y1);
 	}
-	bool can_eat(int x0, int y0, int x1, int y1) override{
+	bool can_capture(int x0, int y0, int x1, int y1) override{
 		return can_move(x0, y0, x1, y1);
 	}
 };
@@ -77,7 +77,7 @@ struct King : public Piece {
 	bool can_move(int x0, int y0, int x1, int y1) override{
 		return abs(x1 - x0) == 1 || abs(y1 - y0) == 1;
 	}
-	bool can_eat(int x0, int y0, int x1, int y1) override{
+	bool can_capture(int x0, int y0, int x1, int y1) override{
 		return can_move(x0, y0, x1, y1);
 	}
 };
