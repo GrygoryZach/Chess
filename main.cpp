@@ -108,12 +108,13 @@ public:
 
     bool check_movement(int x0, int y0, int x1, int y1) {
         if ((new Queen(0))->can_move(x0, y0, x1, y1)) {
-            int d = max(abs(x1 - x0), abs(y1 - y0));
+            int dif = max(abs(x1 - x0), abs(y1 - y0));
             int sign_x = (x1 - x0 > 0) - (x1 - x0 < 0), sign_y = (y1 - y0 > 0) - (y1 - y0 < 0);
-            for (int i = 1; i < d; i++) {
+            for (int i = 1; i < dif; i++)
                 if (desk[y0 + i * sign_y][x0 + i * sign_x]->bw != -1)
                     return false;
-            }
+
+            return true;
         }
 
         if (desk[y1][x1]->bw != -1)
@@ -133,9 +134,9 @@ public:
                 }
     }
 
-    void findAttacking(int &x, int &y, int bw) {
+    void findThreatening(int &x, int &y, int bw) {
         // finds the piece, that attacks the king
-        // x, y - king's coordinates, bw - king's colour
+        // x, y, bw - king's coordinates and colour
         int x_king, y_king;
         findKing(x_king, y_king, bw);
         for (int i = 0; i < 8; i++)
@@ -147,7 +148,10 @@ public:
                 }
     }
 
-    bool isCheck(int bw, int x_king, int y_king) {
+    bool isCheck(int bw) {
+        // checking if there is a piece of opposite to the king's color on the table, that can move to the king's position
+        int x_king, y_king;
+        findKing(x_king, y_king, bw);
         for (int i = 0; i < 8; i++)
             for (int j = 0; j < 8; j++)
                 if (desk[i][j]->bw == !bw && check_movement(j, i, x_king, y_king))
@@ -155,29 +159,71 @@ public:
         return false;
     }
 
-    bool isCheckmate(int king_bw) {
+    bool leadsToCheck(int x0, int y0, int x1, int y1){
+        // checking if the movement will lead to the check
         int x_king, y_king;
-        findKing(x_king, y_king, king_bw);
-        if (isCheck(king_bw, x_king, y_king)) {
-            // 1) try to move the king from the check position
+        findKing(x_king, y_king, desk[x0][y0]->bw);
+
+        Piece checking_piece = *desk[y0][x0];
+        movePiece(x0, y0, x1, y1);
+        bool will_be_check = isCheck(desk[x0][y0]->bw);
+        movePiece(x1, y1, x0, y0);
+        desk[y1][x1] = &checking_piece;
+        return will_be_check;
+    }
+
+    bool isCheckmate(int king_bw) {
+        if (isCheck(king_bw)) {
+            int x_king, y_king;
+            findKing(x_king, y_king, king_bw);
+            // 1) trying to move the king from the check position
             for (int i = -1; i <= 1; i++)
-                for (int j = -1; j <= 1; j++) {
-                    if (not(i == 0 && j == 0) && check_movement(x_king, y_king, x_king + j, y_king + i) && not isCheck(king_bw, x_king + j, y_king + i))
+                for (int j = -1; j <= 1; j++)
+                    if ((!i && !j) && check_movement(x_king, y_king, x_king + j, y_king + i) &&
+                        not leadsToCheck(x_king, y_king, x_king + j, y_king + i))
                         return false;
-                }
-            // 2) try to capture the attacking piece
-            int x_attacking, y_attacking;
-            findAttacking(x_attacking, y_attacking, !king_bw);
-            // Piece attacking_piece = desk[y_attacking][x_attacking];
+
+            // 2) trying to capture the threatening piece
+            int x_threatening, y_threatening;
+            findThreatening(x_threatening, y_threatening, !king_bw);
+            Piece threatening_piece = *desk[y_threatening][x_threatening];
             for (int i = 0; i < 8; i++)
                 for (int j = 0; j < 8; j++)
-                    if (desk[i][j]->bw == king_bw && check_movement(j, i, x_attacking, y_attacking)) {
-                        movePiece(j, i, x_attacking, y_attacking);
-                        if (not isCheck(king_bw, x_king, y_king)) {
-                            movePiece(j, i, x_attacking, y_attacking);
+                    // looking for a chess piece that can capture an opponent's one that is threatening the king
+                    if (desk[i][j]->bw == king_bw && check_movement(j, i, x_threatening, y_threatening)) {
+                        // if it was found, we capture the threatening chess and check again if the king is under attack now
+                        movePiece(j, i, x_threatening, y_threatening);
+                        bool is_check = isCheck(king_bw);
+                        movePiece(x_threatening, y_threatening, j, i);
+                        desk[y_threatening][x_threatening] = &threatening_piece;
+                        // if there is a movement, that leads to getting out of check - the situation is not a checkmate
+                        // if there is a movement of capturing of the threatening piece,
+                        // in which the king has get out of check - the situation is not a checkmate
+                        // if there is a move where, after capturing the piece, the king is no longer in check, the situation is not checkmate.
+                        if (not is_check)
                             return false;
-                        }
                     }
+            // 3) trying to interpose the piece between the king and the threatening piece
+            // to do that, we follow the threatening piece step by step on its way to the king and trying to interpose
+            // the piece on any of these places
+            if ((new Queen(0))->can_move(x_king, y_king, x_threatening, y_threatening)) {
+                int dif = max(abs(x_king - x_threatening), abs(y_threatening - y_king));
+                int sign_x = (x_king - x_threatening > 0) - (x_king - x_threatening < 0);
+                int sign_y = (y_king - y_threatening > 0) - (y_king - y_threatening < 0);
+                for (int i = 1; i < dif; i++)
+                    for (int y = 0; y < 8; y++)
+                        for (int x = 0; x < 8; x++){
+                            Piece now = *desk[y_threatening + i * sign_y][x_threatening + i * sign_x];
+                            if (now.bw == king_bw && now.can_move(x, y, x_threatening + i * sign_x, y_threatening + i * sign_y)) {
+                                movePiece(x, y, x_threatening + i * sign_x, y_threatening + i * sign_y);
+                                bool is_check = isCheck(king_bw);
+                                movePiece(x_threatening + i * sign_x, y_threatening + i * sign_y, x, y);
+                                // if there is a  movement, that leads to getting out of check - the situation is not a checkmate
+                                if (not is_check)
+                                    return false;
+                            }
+                        }
+            }
         }
         return true;
     }
