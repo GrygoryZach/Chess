@@ -10,16 +10,6 @@ HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
 class Desk {
     /*
-	char desk[8][9] = {
-		"RNBQKBNR",
-		"PPPPPPPP",
-		"        ",
-		"        ",
-		"        ",
-		"        ",
-		"pppppppp",
-		"rnbqkbnr"
-	};*/
     Piece *desk[8][8] = {
             {new Rook(1), new Knight(1), new Bishop(1), new Queen(1), new King(1), new Bishop(1), new Knight(1), new Rook(1)},
             {new Pawn(1), new Pawn(1),   new Pawn(1),   new Pawn(1),  new Pawn(1), new Pawn(1),   new Pawn(1),   new Pawn(1)},
@@ -30,11 +20,22 @@ class Desk {
             {new Pawn(0), new Pawn(0),   new Pawn(0),   new Pawn(0),  new Pawn(0), new Pawn(0),   new Pawn(0),   new Pawn(0)},
             {new Rook(0), new Knight(0), new Bishop(0), new Queen(0), new King(0), new Bishop(0), new Knight(0), new Rook(0)}
     };
+    */
+    Piece *desk[8][8] = {
+            {new Piece(), new Piece(),   new Piece(),   new Piece(),  new Piece(), new Piece(),   new Piece(),   new Piece()},
+            {new Piece(), new Piece(),   new Piece(),   new Piece(),  new Piece(), new Piece(),   new Piece(),   new Piece()},
+            {new Piece(), new Piece(),   new Piece(),   new Piece(),  new Piece(), new Piece(),   new Piece(),   new Piece()},
+            {new Piece(), new Piece(),   new Piece(),   new Piece(),  new Piece(), new Piece(),   new Piece(),   new Piece()},
+            {new Queen(1), new Piece(),   new Piece(),   new Piece(),  new Piece(), new Piece(),   new Piece(),   new Piece()},
+            {new Piece(), new Piece(),   new Piece(),   new Piece(),  new Piece(), new Piece(),   new Piece(),   new Piece()},
+            {new Pawn(0), new Pawn(0),   new Pawn(0),   new Pawn(0),  new Pawn(0), new Pawn(0),   new Pawn(0),   new Pawn(0)},
+            {new Piece(), new Piece(),   new Piece(),   new King(0),  new Piece(), new Piece(),   new Piece(),   new Piece()}
+    };
     // chess desk is flipped vertically (up to down - 1 to 8, left to right - a to h)
 
 public:
     void print_desk() {
-        system("cls");
+        //system("cls");
         printf_s("     ");
         for (int i = 0; i < 8; i++)
             printf_s("   %c  ", char(65 + i));
@@ -73,27 +74,33 @@ public:
         for (int i = 0; i < 8; i++)
             printf_s("   %c  ", char(65 + i));
         cout << endl << endl;
+        printf("desk[6][2]: %i '%c'; desk[5][2]: %i '%c'; desk[4][2]: %i '%c'\n", desk[6][2]->bw, desk[6][2]->symbol, desk[5][2]->bw, desk[5][2]->symbol, desk[4][2]->bw, desk[4][2]->symbol);
     }
 
     void makeMovement() {
         int from_x, from_y, to_x, to_y;
+        int result;
         string prim, sec;
-        cin >> prim >> sec;
+        string answer[4] = {"OK\n", "Invalid input!\n", "Invalid movement!\n","Leads to check!\n"};
         while (true) {
-            print_desk();
-            if (prim == sec || not(check_input(prim) && check_input(sec)))
-                cout << "Invalid input!\n";
+            result = 0;
+            cin >> prim >> sec;
+            if (prim == sec || not(checkInput(prim) && checkInput(sec)))
+                result = 1;
             else {
                 chess_to_digit(prim, from_x, from_y);
                 chess_to_digit(sec, to_x, to_y);
-                if (not(check_movement(from_x, from_y, to_x, to_y)))
-                    cout << "Invalid movement!\n";
-                else
-                    break;
+                printf_s("makeMovement: %i %i %i %i\n", from_x, from_y, to_x, to_y);
+                if (desk[from_y][from_x]->bw == -1 || not checkMovement(from_x, from_y, to_x, to_y))
+                    result = 2;
+                else if (leadsToCheck(from_x, from_y, to_x, to_y))
+                        result = 3;
             }
-            cin >> prim >> sec;
+            if (result == 0)
+                break;
+            print_desk();
+            cout<<answer[result];
         }
-
         movePiece(from_x, from_y, to_x, to_y);
     }
 
@@ -102,23 +109,26 @@ public:
         desk[from_y][from_x] = new Piece();
     }
 
-    bool check_input(string str) {
+    bool checkInput(string str) {
         return str.length() == 2 && 'A' <= str[0] && str[0] <= 'H' && '1' <= str[1] && str[1] <= '8';
+
     }
 
-    bool check_movement(int x0, int y0, int x1, int y1) {
+    bool checkMovement(int x0, int y0, int x1, int y1) {
         if ((new Queen(0))->can_move(x0, y0, x1, y1)) {
             int dif = max(abs(x1 - x0), abs(y1 - y0));
             int sign_x = (x1 - x0 > 0) - (x1 - x0 < 0), sign_y = (y1 - y0 > 0) - (y1 - y0 < 0);
             for (int i = 1; i < dif; i++)
-                if (desk[y0 + i * sign_y][x0 + i * sign_x]->bw != -1)
+                if (desk[y0 + i * sign_y][x0 + i * sign_x]->bw != -1){
+                    printf("Barrier: %i '%c'\n", desk[y0 + i * sign_y][x0 + i * sign_x]->bw, desk[y0 + i * sign_y][x0 + i * sign_x]->symbol);
                     return false;
-
-            return true;
+                }
         }
-
-        if (desk[y1][x1]->bw != -1)
+        if (desk[y1][x1]->bw != -1) {
+            printf("can capture %i\t%i %i %i %i\n", desk[y0][x0]->can_capture(x0, y0, x1, y1),x0, y0, x1, y1);
             return desk[y0][x0]->bw != desk[y1][x1]->bw && desk[y0][x0]->can_capture(x0, y0, x1, y1);
+        }
+        cout<<"can move "<<desk[y0][x0]->can_move(x0, y0, x1, y1)<<endl;
 
         return desk[y0][x0]->can_move(x0, y0, x1, y1);
     }
@@ -141,7 +151,7 @@ public:
         findKing(x_king, y_king, bw);
         for (int i = 0; i < 8; i++)
             for (int j = 0; j < 8; j++)
-                if (desk[i][j]->bw == !bw && check_movement(j, i, x_king, y_king)){
+                if (desk[i][j]->bw == (1 - bw) && checkMovement(j, i, x_king, y_king)){
                     y = i;
                     x = j;
                     break;
@@ -154,21 +164,27 @@ public:
         findKing(x_king, y_king, bw);
         for (int i = 0; i < 8; i++)
             for (int j = 0; j < 8; j++)
-                if (desk[i][j]->bw == !bw && check_movement(j, i, x_king, y_king))
-                    return true;
+                if (desk[i][j]->bw == (1 - bw) && checkMovement(j, i, x_king, y_king)) {
+                        printf_s("%i %i  %i", desk[i][j]->bw, bw, checkMovement(j, i, x_king, y_king));
+                        return true;
+                    }
         return false;
     }
 
     bool leadsToCheck(int x0, int y0, int x1, int y1){
         // checking if the movement will lead to the check
         int x_king, y_king;
-        findKing(x_king, y_king, desk[x0][y0]->bw);
-
-        Piece checking_piece = *desk[y0][x0];
+        findKing(x_king, y_king, desk[y0][x0]->bw);
+        Piece checking_piece = *desk[y1][x1];
+        printf("leadsToCheck:\nmoving piece from %i %i to %i %i '%c' to '%c'\n", x0,  y0,  x1,  y1, desk[y0][x0]->symbol, desk[y1][x1]->symbol);
         movePiece(x0, y0, x1, y1);
-        bool will_be_check = isCheck(desk[x0][y0]->bw);
+        printf("Is check %i ", isCheck(desk[y_king][x_king]->bw));
+        bool will_be_check = isCheck(desk[y_king][x_king]->bw);
+        printf("Returning the piece: from %i %i to %i %i '%c' to '%c'\n", x1,  y1, x0,  y0, desk[y1][x1]->symbol, desk[y0][x0]->symbol);
         movePiece(x1, y1, x0, y0);
+        printf("checking_piece: %i '%c'\n", checking_piece.bw, checking_piece.symbol);
         desk[y1][x1] = &checking_piece;
+        printf("checking_piece returned: %i '%c'\n", desk[y1][x1]->bw, desk[y1][x1]->symbol);
         return will_be_check;
     }
 
@@ -179,49 +195,34 @@ public:
             // 1) trying to move the king from the check position
             for (int i = -1; i <= 1; i++)
                 for (int j = -1; j <= 1; j++)
-                    if ((!i && !j) && check_movement(x_king, y_king, x_king + j, y_king + i) &&
+                    if ((!i && !j) && checkMovement(x_king, y_king, x_king + j, y_king + i) &&
                         not leadsToCheck(x_king, y_king, x_king + j, y_king + i))
                         return false;
 
             // 2) trying to capture the threatening piece
             int x_threatening, y_threatening;
             findThreatening(x_threatening, y_threatening, !king_bw);
-            Piece threatening_piece = *desk[y_threatening][x_threatening];
             for (int i = 0; i < 8; i++)
                 for (int j = 0; j < 8; j++)
                     // looking for a chess piece that can capture an opponent's one that is threatening the king
-                    if (desk[i][j]->bw == king_bw && check_movement(j, i, x_threatening, y_threatening)) {
-                        // if it was found, we capture the threatening chess and check again if the king is under attack now
-                        movePiece(j, i, x_threatening, y_threatening);
-                        bool is_check = isCheck(king_bw);
-                        movePiece(x_threatening, y_threatening, j, i);
-                        desk[y_threatening][x_threatening] = &threatening_piece;
-                        // if there is a movement, that leads to getting out of check - the situation is not a checkmate
-                        // if there is a movement of capturing of the threatening piece,
-                        // in which the king has get out of check - the situation is not a checkmate
-                        // if there is a move where, after capturing the piece, the king is no longer in check, the situation is not checkmate.
-                        if (not is_check)
-                            return false;
-                    }
+                    if (desk[i][j]->bw == king_bw && checkMovement(j, i, x_threatening, y_threatening) &&
+                        not leadsToCheck(j, i, x_threatening, y_threatening))
+                        // if there is a move where after capturing the piece the king
+                        // is no longer in check, the situation is not a checkmate.
+                        return false;
             // 3) trying to interpose the piece between the king and the threatening piece
-            // to do that, we follow the threatening piece step by step on its way to the king and trying to interpose
-            // the piece on any of these places
+            // To do that it's following the threatening piece step by step on its way to the king and trying
+            // to interpose the piece on any of these places
             if ((new Queen(0))->can_move(x_king, y_king, x_threatening, y_threatening)) {
                 int dif = max(abs(x_king - x_threatening), abs(y_threatening - y_king));
                 int sign_x = (x_king - x_threatening > 0) - (x_king - x_threatening < 0);
                 int sign_y = (y_king - y_threatening > 0) - (y_king - y_threatening < 0);
                 for (int i = 1; i < dif; i++)
                     for (int y = 0; y < 8; y++)
-                        for (int x = 0; x < 8; x++){
+                        for (int x = 0; x < 8; x++) {
                             Piece now = *desk[y_threatening + i * sign_y][x_threatening + i * sign_x];
-                            if (now.bw == king_bw && now.can_move(x, y, x_threatening + i * sign_x, y_threatening + i * sign_y)) {
-                                movePiece(x, y, x_threatening + i * sign_x, y_threatening + i * sign_y);
-                                bool is_check = isCheck(king_bw);
-                                movePiece(x_threatening + i * sign_x, y_threatening + i * sign_y, x, y);
-                                // if there is a  movement, that leads to getting out of check - the situation is not a checkmate
-                                if (not is_check)
-                                    return false;
-                            }
+                            if (now.bw == king_bw && now.can_move(x, y, x_threatening + i * sign_x, y_threatening + i * sign_y) && not leadsToCheck(x, y, x_threatening + i * sign_x, y_threatening + i * sign_y))
+                                return false;
                         }
             }
         }

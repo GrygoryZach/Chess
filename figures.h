@@ -12,8 +12,8 @@ struct Piece {
     Piece() {bw = -1; symbol = ' ';}
 	explicit Piece(int bw_) {bw = bw_;}
 
-	virtual bool can_move(int x0, int y0, int x1, int y1) { return 0; }
-	virtual bool can_capture(int x0, int y0, int x1, int y1) { return 0; }
+	virtual bool can_move(int x0, int y0, int x1, int y1) { return false; }
+	virtual bool can_capture(int x0, int y0, int x1, int y1) { return false; }
 };
 
 struct Pawn : public Piece {
