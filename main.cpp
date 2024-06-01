@@ -178,18 +178,15 @@ public:
         // checking if the movement will lead to the check
         int x_king, y_king;
         findKing(x_king, y_king, desk[y0][x0]->bw);
-        Piece checking_piece = *desk[y1][x1];
-        printf("leadsToCheck:\nmoving piece from %i %i to %i %i '%c' to '%c'\n", x0, y0, x1, y1, desk[y0][x0]->symbol,
-               desk[y1][x1]->symbol);
+        Piece *checking_piece = new Piece();
+        checking_piece = desk[y1][x1];
+        printf("leadsToCheck:\nmoving piece from %i %i to %i %i '%c' to '%c'\n", x0, y0, x1, y1, desk[y0][x0]->symbol, desk[y1][x1]->symbol);
         movePiece(x0, y0, x1, y1);
         printf("Is check %i ", isCheck(desk[y_king][x_king]->bw));
         bool will_be_check = isCheck(desk[y_king][x_king]->bw);
-        printf("Returning the piece: from %i %i to %i %i '%c' to '%c'\n", x1, y1, x0, y0, desk[y1][x1]->symbol,
-               desk[y0][x0]->symbol);
         movePiece(x1, y1, x0, y0);
-        printf("checking_piece: %i '%c'\n", checking_piece.bw, checking_piece.symbol);
-        desk[y1][x1] = &checking_piece;
-        printf("checking_piece returned: %i '%c'\n", desk[y1][x1]->bw, desk[y1][x1]->symbol);
+        desk[y1][x1] = checking_piece;
+        delete checking_piece;
         return will_be_check;
     }
 
