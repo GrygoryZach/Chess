@@ -22,14 +22,14 @@ class Desk {
     };
     */
     Piece *desk[8][8] = {
-            {new Piece(),  new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
-            {new Piece(),  new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
-            {new Piece(),  new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
-            {new Piece(),  new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
+            {new King(1),   new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
+            {new Piece(),   new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
+            {new Piece(),   new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
+            {new Piece(),   new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
             {new Queen(1), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
-            {new Piece(),  new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
-            {new Pawn(0),  new Pawn(0), new Pawn(0), new Pawn(0), new Pawn(0), new Pawn(0), new Pawn(0), new Pawn(0)},
-            {new Piece(),  new Piece(), new Piece(), new King(0), new Piece(), new Piece(), new Piece(), new Piece()}
+            {new Piece(),   new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece(), new Piece()},
+            {new Pawn(0),   new Pawn(0), new Pawn(0), new Pawn(0), new Pawn(0), new Pawn(0), new Pawn(0), new Pawn(0)},
+            {new Piece(),   new Piece(), new Piece(), new King(0), new Piece(), new Piece(), new Piece(), new Piece()}
     };
     // chess desk is flipped vertically (up to down - 1 to 8, left to right - a to h)
 
@@ -77,6 +77,7 @@ public:
         printf("C2: %i '%c' (%i); C3: %i '%c' (%i); C4: %i '%c' (%i)\n", desk[6][2]->bw, desk[6][2]->symbol,
                desk[6][2]->symbol, desk[5][2]->bw, desk[5][2]->symbol, desk[5][2]->symbol, desk[4][2]->bw,
                desk[4][2]->symbol, desk[4][2]->symbol);
+        printf_s("check w: %i b: %i\n", isCheck(1), isCheck(0));
     }
 
     void makeMovement() {
@@ -95,8 +96,12 @@ public:
                 printf_s("makeMovement: %i %i %i %i\n", from_x, from_y, to_x, to_y);
                 if (desk[from_y][from_x]->bw == -1 || not checkMovement(from_x, from_y, to_x, to_y))
                     result = 2;
-                else if (leadsToCheck(from_x, from_y, to_x, to_y))
+                else if (leadsToCheck(from_x, from_y, to_x, to_y)) {
+                    printf("res3:\tfrom: %i '%c' (%i); to: %i '%c' (%i); cp: %i '%c' (%i)\n",
+                           desk[from_y][from_x]->bw, desk[from_y][from_x]->symbol, desk[from_y][from_x]->symbol,
+                           desk[to_y][to_x]->bw, desk[to_y][to_x]->symbol, desk[to_y][to_x]->symbol);
                     result = 3;
+                }
             }
             if (result == 0)
                 break;
@@ -117,21 +122,21 @@ public:
     }
 
     bool checkMovement(int x0, int y0, int x1, int y1) {
-        if ((new Queen(0))->can_move(x0, y0, x1, y1)) {
+        if (desk[y0][x0]->symbol != 'K' + 32 * (desk[y0][x0]->bw == 1)) {
             int dif = max(abs(x1 - x0), abs(y1 - y0));
             int sign_x = (x1 - x0 > 0) - (x1 - x0 < 0), sign_y = (y1 - y0 > 0) - (y1 - y0 < 0);
             for (int i = 1; i < dif; i++)
                 if (desk[y0 + i * sign_y][x0 + i * sign_x]->bw != -1) {
-                    printf("Barrier: %i '%c'\n", desk[y0 + i * sign_y][x0 + i * sign_x]->bw,
-                           desk[y0 + i * sign_y][x0 + i * sign_x]->symbol);
+                    // there's a figure between the
+                    printf("Barrier: %i '%c'\n", desk[y0 + i * sign_y][x0 + i * sign_x]->bw, desk[y0 + i * sign_y][x0 + i * sign_x]->symbol);
                     return false;
                 }
         }
         if (desk[y1][x1]->bw != -1) {
-            printf("can capture %i\t%i %i %i %i\n", desk[y0][x0]->can_capture(x0, y0, x1, y1), x0, y0, x1, y1);
+//            printf("can capture %i\t%i %i %i %i\n", desk[y0][x0]->can_capture(x0, y0, x1, y1), x0, y0, x1, y1);
             return desk[y0][x0]->bw != desk[y1][x1]->bw && desk[y0][x0]->can_capture(x0, y0, x1, y1);
         }
-        cout << "can move " << desk[y0][x0]->can_move(x0, y0, x1, y1) << endl;
+//        cout << "can move " << desk[y0][x0]->can_move(x0, y0, x1, y1) << endl;
 
         return desk[y0][x0]->can_move(x0, y0, x1, y1);
     }
@@ -165,28 +170,24 @@ public:
         // checking if there is a piece of opposite to the king's color on the table, that can move to the king's position
         int x_king, y_king;
         findKing(x_king, y_king, bw);
+        printf("isCheck ");
         for (int i = 0; i < 8; i++)
             for (int j = 0; j < 8; j++)
                 if (desk[i][j]->bw == (1 - bw) && checkMovement(j, i, x_king, y_king)) {
-                    printf_s("%i %i  %i", desk[i][j]->bw, bw, checkMovement(j, i, x_king, y_king));
-                    return true;
-                }
+                        return true;
+                    }
         return false;
     }
 
     bool leadsToCheck(int x0, int y0, int x1, int y1) {
-        // checking if the movement will lead to the check
+        // checking if the movement will lead to check
         int x_king, y_king;
         findKing(x_king, y_king, desk[y0][x0]->bw);
-        Piece *checking_piece = new Piece();
-        checking_piece = desk[y1][x1];
-        printf("leadsToCheck:\nmoving piece from %i %i to %i %i '%c' to '%c'\n", x0, y0, x1, y1, desk[y0][x0]->symbol, desk[y1][x1]->symbol);
+        auto checking_piece = *desk[y1][x1];
         movePiece(x0, y0, x1, y1);
-        printf("Is check %i ", isCheck(desk[y_king][x_king]->bw));
-        bool will_be_check = isCheck(desk[y_king][x_king]->bw);
+        bool will_be_check = isCheck(desk[y1][x1]->bw);
         movePiece(x1, y1, x0, y0);
-        desk[y1][x1] = checking_piece;
-        delete checking_piece;
+        *desk[y1][x1] = checking_piece;
         return will_be_check;
     }
 
